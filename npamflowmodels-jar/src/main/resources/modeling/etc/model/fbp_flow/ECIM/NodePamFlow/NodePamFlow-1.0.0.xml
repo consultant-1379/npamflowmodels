@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow:FlowDefinition xmlns:flow="urn:com:ericsson:schema:xml:oss:fbp_flow" xmlns:oss_common="urn:com:ericsson:schema:xml:oss:oss_common"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                     oss_common:lifeCycle="CURRENT"
+                     oss_common:name="NodePamFlow" oss_common:ns="ECIM"
+                     oss_common:version="1.0.0" synchronicity="SYNCHRONOUS">
+
+    <oss_common:modelCreationInfo author="BlueSky" creationDate="28/11/2022">
+        <oss_common:designedModel componentId="NodePamFlow-model" />
+    </oss_common:modelCreationInfo>
+
+    <oss_common:desc>This flow is used to send node configurations in NETCONF format to the node</oss_common:desc>
+
+    <flow:input name="NodePamFlowInput" />
+
+    <flow:step name="SshCredentialsManagerHandler">
+        <flow:handlerTypeRef
+            uri="model://MEDIATION/SshCredentialsManagerHandler/1.0.0" />
+        <flow:attribute name="mediationTaskRequest" source="request:mediationTaskRequest" />
+    </flow:step>
+
+    <flow:step name="NetconfSessionBuilderHandler">
+        <flow:handlerTypeRef uri="model://MEDIATION/NetconfSessionBuilderHandler/1.0.0" />
+        <flow:attribute name="sessionMode" value="SHORT_LIFE" />
+        <flow:attribute name="sessionType" value="SUBSYSTEM" />
+        <flow:attribute name="sessionTypeValue" value="netconf-ecim" />
+        <flow:attribute name="transportSocketTimeout" value="100000" />
+        <flow:attribute name="xaResourceProvider" value="COM" />
+    </flow:step>
+
+    <flow:step name="TlsCredentialsManagerHandler">
+        <flow:handlerTypeRef uri="model://MEDIATION/TlsCredentialsManagerHandler/1.0.0" />
+        <flow:attribute name="overrideDefaultConfiguration" source="sfk_config:useLocalCOMUser?fallback=true&amp;mandatory=false" />
+        <flow:attribute name="certificateFilename" value="esumtlsnetconf.cert" />
+        <flow:attribute name="keyFilename" value="esumtlsnetconf.key" />
+        <flow:attribute name="trustCertificateFilename" value="esumtlsnetconfCA.pem" />
+    </flow:step>
+
+    <flow:step name="NetconfConnectHandler">
+        <flow:handlerTypeRef uri="model://MEDIATION/NetconfConnectHandler/1.0.2" />
+    </flow:step>
+
+    <flow:step name="NodePamUpdateMaintenanceUserHandler">
+        <flow:handlerTypeRef uri="model://ECIM/NodePamUpdateMaintenanceUserHandler/1.0.0" />
+    </flow:step>
+
+    <flow:step name="NetconfDisconnectHandler">
+        <flow:handlerTypeRef uri="model://MEDIATION/NetconfDisconnectHandler/1.0.2" />
+    </flow:step>
+
+    <flow:step name="NetconfSessionDestroyerHandler">
+        <flow:handlerTypeRef uri="model://MEDIATION/NetconfSessionDestroyerHandler/1.0.0" />
+    </flow:step>
+
+    <flow:path transaction="REQUIRED">
+        <flow:from uri="direct:NodePamFlowInput" />
+        <flow:to uri="SshCredentialsManagerHandler" />
+        <flow:to uri="TlsCredentialsManagerHandler" />
+        <flow:to uri="NetconfSessionBuilderHandler" />
+        <flow:to uri="NetconfConnectHandler" />
+        <flow:to uri="NodePamUpdateMaintenanceUserHandler" />
+        <flow:to uri="NetconfDisconnectHandler" />
+        <flow:to uri="NetconfSessionDestroyerHandler" />
+    </flow:path>
+
+    <flow:capabilities>
+        <flow:requiredCapability name="MSCMCE_SERVICE_GROUP" />
+        <flow:requiredCapability name="NETCONF" />
+    </flow:capabilities>
+
+</flow:FlowDefinition>
+
